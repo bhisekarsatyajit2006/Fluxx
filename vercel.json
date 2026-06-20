@@ -1,14 +1,1 @@
-{
-  "experimentalServices": {
-    "frontend": {
-      "root": "frontend",
-      "framework": "vite",
-      "routePrefix": "/"
-    },
-    "backend": {
-      "root": "backend",
-      "entrypoint": "main.py",
-      "routePrefix": "/api"
-    }
-  }
-}
+{"version":2,"builds":[{"src":"api/index.py","use":"@vercel/python"}],"routes":[{"src":"\/(.*)","dest":"\/api\/index.py"}]}
