@@ -34,11 +34,13 @@ async def generate_ai_analysis(result: dict) -> str:
     
     # Priority: NVIDIA NIM
     if NVIDIA_API_KEY:
-        print("DEBUG: Using NVIDIA NIM for Result Analysis")
+        print("DEBUG: NVIDIA_API_KEY found. Using NVIDIA NIM for Result Analysis")
+        print(f"DEBUG: NVIDIA_API_KEY length: {len(NVIDIA_API_KEY)}")
         try:
             return await _generate_nvidia_analysis(result)
         except Exception as e:
-            print(f"⚠️ NVIDIA NIM Error: {e} — falling back to Gemini")
+            print(f"⚠️ NVIDIA NIM Error: {type(e).__name__}: {str(e)}")
+            print("DEBUG: Falling back to Gemini")
 
     # Fallback: Gemini
     if not GEMINI_API_KEY:
@@ -52,27 +54,43 @@ async def generate_ai_analysis(result: dict) -> str:
         response = await model.generate_content_async(_build_prompt(result))
         return response.text.strip()
     except Exception as exc:
-        print(f"⚠️ Gemini error: {exc} — using fallback")
+        print(f"⚠️ Gemini error: {type(exc).__name__}: {str(exc)}")
+        print("DEBUG: Using fallback template")
         return _fallback_analysis(result)
 
 async def _generate_nvidia_analysis(result: dict) -> str:
+    """
+    Evaluate code using NVIDIA NIM API.
+    Raises: Exception if API call fails
+    """
+    if not NVIDIA_API_KEY:
+        raise ValueError("NVIDIA_API_KEY is not configured")
+    
     url = "https://integrate.api.nvidia.com/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {NVIDIA_API_KEY}",
         "Content-Type": "application/json"
     }
     payload = {
-        "model": "google/diffusiongemma-26b-a4b-it",
+        "model": "meta/llama-3.1-405b-instruct",
         "messages": [{"role": "user", "content": _build_prompt(result)}],
         "temperature": 0.5,
         "max_tokens": 800,
         "top_p": 0.95
     }
     
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(url, headers=headers, json=payload)
-        response.raise_for_status()
+        
+        if response.status_code != 200:
+            error_text = response.text
+            raise Exception(f"NVIDIA API returned status {response.status_code}: {error_text}")
+        
         data = response.json()
+        
+        if "choices" not in data or not data["choices"]:
+            raise Exception(f"Unexpected NVIDIA API response: {data}")
+        
         return data["choices"][0]["message"]["content"].strip()
 
 
