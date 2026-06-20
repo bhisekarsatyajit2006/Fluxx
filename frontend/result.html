@@ -5,18 +5,233 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Results — Pyrefly Assessment</title>
   <link rel="stylesheet" href="/static/css/style.css"/>
+  <style>
+    .results-page {
+      min-height: 100vh;
+      padding: 40px 20px;
+      background: linear-gradient(135deg, rgba(108,99,255,0.1), rgba(167,107,255,0.1));
+    }
+    .results-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .score-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 40px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .big-score {
+      font-size: 5rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #6c63ff, #a76bff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin: 20px 0;
+    }
+    .iq-category {
+      font-size: 1.5rem;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+    .percentile {
+      font-size: 1.2rem;
+      color: var(--accent-light);
+      margin-top: 20px;
+    }
+    .breakdown-section {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 15px;
+      padding: 30px;
+      margin-bottom: 30px;
+    }
+    .breakdown-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--accent-light);
+    }
+    .category-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 15px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+    }
+    .category-name {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .category-score {
+      text-align: right;
+      color: var(--accent-light);
+      font-weight: 700;
+    }
+    .analysis-section {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 15px;
+      padding: 30px;
+      margin-bottom: 30px;
+      line-height: 1.8;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .analysis-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--accent-light);
+    }
+    .button-group {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 30px;
+    }
+    .btn {
+      padding: 12px 30px;
+      border-radius: 10px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #6c63ff, #a76bff);
+      color: white;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(108, 99, 255, 0.3);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+    }
+    .error {
+      background: rgba(255, 84, 112, 0.1);
+      border: 1px solid rgba(255, 84, 112, 0.5);
+      border-radius: 15px;
+      padding: 30px;
+      text-align: center;
+      color: #ff5470;
+    }
+  </style>
 </head>
 <body>
   <script>window.userEmail = window.userEmail || localStorage.getItem('user_email') || "";</script>
-  <!-- results page content retained -->
-  <div id="results-content">Results will render here</div>
+  
+  <div class="results-page">
+    <div class="results-container">
+      <div id="results-content">
+        <div class="loading">Loading your results...</div>
+      </div>
+    </div>
+  </div>
 
   <script>
-    // Logout
-    document.getElementById('logout-btn')?.addEventListener('click', () => {
-      localStorage.clear();
-      window.location.href = '/login';
-    });
+    const API_BASE = ''; // Use relative paths
+
+    async function loadResults() {
+      const resultsDiv = document.getElementById('results-content');
+      
+      try {
+        // Get result from sessionStorage (set by test.js after submission)
+        const resultJson = sessionStorage.getItem('iq_result');
+        if (!resultJson) {
+          throw new Error('No test results found. Please take the test first.');
+        }
+
+        const result = JSON.parse(resultJson);
+
+        // Validate result
+        if (!result.iq_score) {
+          throw new Error('Invalid result data.');
+        }
+
+        // Render results
+        const html = `
+          <div class="score-card">
+            <h1 style="color: var(--text-primary); margin-bottom: 10px;">🎉 Assessment Complete</h1>
+            <div class="iq-category">${result.category}</div>
+            <div class="big-score">${result.iq_score}</div>
+            <div style="font-size: 0.9rem; color: var(--text-muted);">Your IQ Score</div>
+            <div class="percentile">
+              Percentile Rank: <strong>${result.percentile}th</strong>
+            </div>
+            <div style="margin-top: 20px; color: var(--text-muted);">
+              You answered <strong>${result.correct_count}</strong> out of <strong>${result.total}</strong> questions correctly.
+            </div>
+          </div>
+
+          <div class="breakdown-section">
+            <div class="breakdown-title">📊 Performance Breakdown by Category</div>
+            ${Object.entries(result.breakdown || {})
+              .map(([category, data]) => {
+                const percentage = Math.round((data.correct / data.total) * 100);
+                return `
+                  <div class="category-row">
+                    <div class="category-name">${category}</div>
+                    <div class="category-score">${data.correct}/${data.total} (${percentage}%)</div>
+                  </div>
+                `;
+              })
+              .join('')}
+          </div>
+
+          <div class="analysis-section">
+            <div class="analysis-title">🤖 AI-Generated Analysis</div>
+            <div>${result.ai_analysis || 'Analysis unavailable at this time.'}</div>
+          </div>
+
+          <div class="button-group">
+            <a href="/dashboard" class="btn btn-primary">📋 Back to Dashboard</a>
+            <a href="/test" class="btn btn-secondary">🔄 Retake Test</a>
+          </div>
+        `;
+
+        resultsDiv.innerHTML = html;
+      } catch (err) {
+        resultsDiv.innerHTML = `
+          <div class="error">
+            <h2>⚠️ Error Loading Results</h2>
+            <p>${err.message}</p>
+            <div class="button-group">
+              <a href="/dashboard" class="btn btn-primary">Return to Dashboard</a>
+              <a href="/test" class="btn btn-secondary">Take Test</a>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Load results when page loads
+    document.addEventListener('DOMContentLoaded', loadResults);
+
+    // Clear sessionStorage after 5 minutes (user should have seen results by then)
+    setTimeout(() => {
+      sessionStorage.removeItem('iq_result');
+    }, 300000);
   </script>
 </body>
 </html>
