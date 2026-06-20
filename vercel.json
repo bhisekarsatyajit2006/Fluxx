@@ -2,7 +2,7 @@
   "experimentalServices": {
     "frontend": {
       "root": "frontend",
-      "framework": null,
+      "framework": "other",
       "routePrefix": "/"
     },
     "backend": {
