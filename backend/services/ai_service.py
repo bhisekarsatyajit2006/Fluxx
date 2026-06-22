@@ -1,11 +1,11 @@
 """
-AI-powered result analysis using Google Gemini.
+AI-powered result analysis using NVIDIA NIM.
 Falls back to a template-based analysis if no API key is configured.
 """
 
 import httpx
-import google.generativeai as genai
-from config import GEMINI_API_KEY, NVIDIA_API_KEY, AI_PROVIDER
+from config import NVIDIA_API_KEY
+
 
 def _build_prompt(result: dict) -> str:
     breakdown_lines = "\n".join(
@@ -31,29 +31,18 @@ Tone: Professional and concise. No bold/italics.
 
 async def generate_ai_analysis(result: dict) -> str:
     """Returns an AI-generated textual analysis of the test result."""
-    
-    # Priority: NVIDIA NIM
-    if NVIDIA_API_KEY:
-        print("DEBUG: Using NVIDIA NIM for Result Analysis")
-        try:
-            return await _generate_nvidia_analysis(result)
-        except Exception as e:
-            print(f"⚠️ NVIDIA NIM Error: {e} — falling back to Gemini")
 
-    # Fallback: Gemini
-    if not GEMINI_API_KEY:
-        print("DEBUG: No AI keys found, using static template.")
+    if not NVIDIA_API_KEY:
+        print("DEBUG: No NVIDIA key found, using static template.")
         return _fallback_analysis(result)
 
-    print("DEBUG: Using Gemini for Result Analysis")
+    print("DEBUG: Using NVIDIA NIM for Result Analysis")
     try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel("models/gemini-2.5-flash")
-        response = await model.generate_content_async(_build_prompt(result))
-        return response.text.strip()
-    except Exception as exc:
-        print(f"⚠️ Gemini error: {exc} — using fallback")
+        return await _generate_nvidia_analysis(result)
+    except Exception as e:
+        print(f"⚠️ NVIDIA NIM Error: {e} — using fallback")
         return _fallback_analysis(result)
+
 
 async def _generate_nvidia_analysis(result: dict) -> str:
     url = "https://integrate.api.nvidia.com/v1/chat/completions"
@@ -68,7 +57,7 @@ async def _generate_nvidia_analysis(result: dict) -> str:
         "max_tokens": 800,
         "top_p": 0.95
     }
-    
+
     async with httpx.AsyncClient() as client:
         response = await client.post(url, headers=headers, json=payload)
         response.raise_for_status()
@@ -83,7 +72,6 @@ def _fallback_analysis(result: dict) -> str:
     corr = result["correct_count"]
     tot  = result["total"]
 
-    # Find best and worst categories
     breakdown = result.get("breakdown", {})
     sorted_cats = sorted(
         breakdown.items(),
