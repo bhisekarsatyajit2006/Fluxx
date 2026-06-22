@@ -1,11 +1,11 @@
 """
-AI-powered result analysis using NVIDIA NIM.
+AI-powered result analysis using Google Gemini.
 Falls back to a template-based analysis if no API key is configured.
 """
 
 import httpx
-from config import NVIDIA_API_KEY
-
+import google.generativeai as genai
+from config import GEMINI_API_KEY, NVIDIA_API_KEY, AI_PROVIDER
 
 def _build_prompt(result: dict) -> str:
     breakdown_lines = "\n".join(
@@ -31,37 +31,66 @@ Tone: Professional and concise. No bold/italics.
 
 async def generate_ai_analysis(result: dict) -> str:
     """Returns an AI-generated textual analysis of the test result."""
+    
+    # Priority: NVIDIA NIM
+    if NVIDIA_API_KEY:
+        print("DEBUG: NVIDIA_API_KEY found. Using NVIDIA NIM for Result Analysis")
+        print(f"DEBUG: NVIDIA_API_KEY length: {len(NVIDIA_API_KEY)}")
+        try:
+            return await _generate_nvidia_analysis(result)
+        except Exception as e:
+            print(f"⚠️ NVIDIA NIM Error: {type(e).__name__}: {str(e)}")
+            print("DEBUG: Falling back to Gemini")
 
-    if not NVIDIA_API_KEY:
-        print("DEBUG: No NVIDIA key found, using static template.")
+    # Fallback: Gemini
+    if not GEMINI_API_KEY:
+        print("DEBUG: No AI keys found, using static template.")
         return _fallback_analysis(result)
 
-    print("DEBUG: Using NVIDIA NIM for Result Analysis")
+    print("DEBUG: Using Gemini for Result Analysis")
     try:
-        return await _generate_nvidia_analysis(result)
-    except Exception as e:
-        print(f"⚠️ NVIDIA NIM Error: {e} — using fallback")
+        genai.configure(api_key=GEMINI_API_KEY)
+        model = genai.GenerativeModel("models/gemini-2.5-flash")
+        response = await model.generate_content_async(_build_prompt(result))
+        return response.text.strip()
+    except Exception as exc:
+        print(f"⚠️ Gemini error: {type(exc).__name__}: {str(exc)}")
+        print("DEBUG: Using fallback template")
         return _fallback_analysis(result)
-
 
 async def _generate_nvidia_analysis(result: dict) -> str:
+    """
+    Evaluate code using NVIDIA NIM API.
+    Raises: Exception if API call fails
+    """
+    if not NVIDIA_API_KEY:
+        raise ValueError("NVIDIA_API_KEY is not configured")
+    
     url = "https://integrate.api.nvidia.com/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {NVIDIA_API_KEY}",
         "Content-Type": "application/json"
     }
     payload = {
-        "model": "meta/llama-3.1-8b-instruct",
+        "model": "meta/llama-3.1-405b-instruct",
         "messages": [{"role": "user", "content": _build_prompt(result)}],
         "temperature": 0.5,
         "max_tokens": 800,
         "top_p": 0.95
     }
-
-    async with httpx.AsyncClient() as client:
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(url, headers=headers, json=payload)
-        response.raise_for_status()
+        
+        if response.status_code != 200:
+            error_text = response.text
+            raise Exception(f"NVIDIA API returned status {response.status_code}: {error_text}")
+        
         data = response.json()
+        
+        if "choices" not in data or not data["choices"]:
+            raise Exception(f"Unexpected NVIDIA API response: {data}")
+        
         return data["choices"][0]["message"]["content"].strip()
 
 
@@ -72,6 +101,7 @@ def _fallback_analysis(result: dict) -> str:
     corr = result["correct_count"]
     tot  = result["total"]
 
+    # Find best and worst categories
     breakdown = result.get("breakdown", {})
     sorted_cats = sorted(
         breakdown.items(),

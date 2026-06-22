@@ -36,9 +36,10 @@
   </style>
 </head>
 <body>
+  <script>window.userEmail = window.userEmail || localStorage.getItem('user_email') || "";</script>
   <canvas id="particles-canvas"></canvas>
 
-  <nav class="top-nav" style="position:fixed; top:0; left:0; right:0; padding: 20px 40px; display:flex; justify-content: space-between; align-items:center; z-index:1000; background:rgba(5,9,20,0.4); backdrop-filter:blur(10px); border-bottom:1px solid var(--border);">
+  <nav class="top-nav" style="position:fixed; top:0; left:0; right:0; padding: 20px 40px; display:flex; justify-content: space-between; align-items:center; z-index:1000; background:rgba(5,9,20,0.4[...])">
     <div class="brand">Pyrefly<span>IQ</span></div>
     <div style="display:flex; gap:20px; align-items:center;">
       <a href="/prepare" class="nav-link" style="color:var(--text-secondary); text-decoration:none; font-size:0.9rem;">Preparation Guide</a>
