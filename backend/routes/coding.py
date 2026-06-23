@@ -48,9 +48,11 @@ Output exactly these sections (BE BRIEF, 2 sentences max each):
 
     try:
         if not GEMINI_API_KEY:
-            print("ERROR: No GEMINI_API_KEY configured")
+            print(f"ERROR: No GEMINI_API_KEY configured. Value: '{GEMINI_API_KEY}'")
             ai_evaluation = "AI evaluation failed: No API key configured."
         else:
+            # Re-configure inside function for reliability
+            import google.generativeai as genai
             genai.configure(api_key=GEMINI_API_KEY)
             model = genai.GenerativeModel('models/gemini-2.5-flash')
             response = await model.generate_content_async(prompt)

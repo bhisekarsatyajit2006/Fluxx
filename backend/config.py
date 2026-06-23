@@ -1,7 +1,17 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load .env from the same directory as this file
+BASE_DIR = Path(__file__).resolve().parent
+ENV_FILE = BASE_DIR / ".env"
+
+if ENV_FILE.exists():
+    load_dotenv(ENV_FILE)
+    print(f"DEBUG: Loaded environment from {ENV_FILE}")
+else:
+    load_dotenv() # Fallback to default behavior
+    print(f"DEBUG: .env not found at {ENV_FILE}, searching default paths")
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://satyajitbhisekar9_db_user:TestPassword123@cluster0.6hhwge7.mongodb.net/myapp?retryWrites=true&w=majority&appName=Cluster0")
 MONGO_DB  = os.getenv("MONGO_DB", "iq_test")
