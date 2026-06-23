@@ -53,6 +53,23 @@ app.include_router(auth_router)
 app.include_router(coding_router)
 app.include_router(test_router)
 
+@app.get("/api/health-check")
+async def health_check():
+    from config import GEMINI_API_KEY, MONGO_URI
+    import os
+    
+    return {
+        "status": "online",
+        "env": {
+            "GEMINI_API_KEY_PRESENT": bool(GEMINI_API_KEY),
+            "GEMINI_API_KEY_LENGTH": len(GEMINI_API_KEY) if GEMINI_API_KEY else 0,
+            "GEMINI_API_KEY_MASKED": f"{GEMINI_API_KEY[:4]}...{GEMINI_API_KEY[-4:]}" if GEMINI_API_KEY else "MISSING",
+            "MONGO_URI_PRESENT": bool(MONGO_URI),
+            "CURRENT_DIRECTORY": os.getcwd(),
+            "FILES_IN_BACKEND": os.listdir(".") if os.path.exists(".") else []
+        }
+    }
+
 
 
 # ── Serve frontend static files ───────────────────────────────────────
