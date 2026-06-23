@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from config import FRONTEND_URL, NVIDIA_API_KEY, GEMINI_API_KEY
+from config import FRONTEND_URL, GEMINI_API_KEY
 from database import connect_db, close_db
 from routes.test import router as test_router
 from routes.auth import router as auth_router
@@ -21,9 +21,6 @@ async def lifespan(app: FastAPI):
     print("=" * 60)
     print("🚀 APPLICATION STARTUP")
     print("=" * 60)
-    print(f"✓ NVIDIA_API_KEY configured: {bool(NVIDIA_API_KEY)}")
-    if NVIDIA_API_KEY:
-        print(f"  Length: {len(NVIDIA_API_KEY)} characters")
     print(f"✓ GEMINI_API_KEY configured: {bool(GEMINI_API_KEY)}")
     if GEMINI_API_KEY:
         print(f"  Length: {len(GEMINI_API_KEY)} characters")

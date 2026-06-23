@@ -7,8 +7,6 @@ MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://satyajitbhisekar9_db_user:Test
 MONGO_DB  = os.getenv("MONGO_DB", "iq_test")
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "")
-AI_PROVIDER    = os.getenv("AI_PROVIDER", "gemini") # "gemini" or "nvidia"
 
 FRONTEND_URL   = os.getenv("FRONTEND_URL", "http://localhost:5500")
 JWT_SECRET     = os.getenv("JWT_SECRET", "super-secret-key-change-me")
