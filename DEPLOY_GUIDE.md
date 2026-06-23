@@ -20,8 +20,8 @@ This guide will help you deploy the assessment platform to the cloud.
 5. **Start Command**: `cd backend && python -m uvicorn main:app --host 0.0.0.0 --port $PORT`
 6. **Environment Variables**: Add these in the "Environment" tab:
    - `MONGO_URI`: Your MongoDB Atlas string.
-   - `NVIDIA_API_KEY`: Your NVIDIA NIM key.
-   - `AI_PROVIDER`: `nvidia`
+   - `GEMINI_API_KEY`: Your Google Gemini API key.
+   - `AI_PROVIDER`: `gemini`
    - `JWT_SECRET`: A secure random string.
    - `PYTHONPATH`: `.` (optional but helpful)
 
@@ -33,7 +33,7 @@ This guide will help you deploy the assessment platform to the cloud.
 2. **Settings**:
    - **Build Command**: `pip install -r backend/requirements.txt`
    - **Start Command**: `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT`
-3. **Variables**: Add `MONGO_URI`, `NVIDIA_API_KEY`, `AI_PROVIDER`, and `JWT_SECRET`.
+3. **Variables**: Add `MONGO_URI`, `GEMINI_API_KEY`, `AI_PROVIDER`, and `JWT_SECRET`.
 
 ---
 
@@ -48,8 +48,8 @@ Vercel is great for the IQ Test platform because it automatically handles the fr
    - Vercel will detect it as a Python project.
 4. **Environment Variables**: Go to "Settings" -> "Environment Variables" and add:
    - `MONGO_URI`: Your MongoDB string.
-   - `NVIDIA_API_KEY`: Your NVIDIA NIM key.
-   - `AI_PROVIDER`: `nvidia`
+   - `GEMINI_API_KEY`: Your Google Gemini API key.
+   - `AI_PROVIDER`: `gemini`
    - `JWT_SECRET`: A secure key.
 5. **Deploy**: Click "Deploy". Your app will be live at `your-project.vercel.app`.
 
@@ -63,7 +63,7 @@ Vercel is great for the IQ Test platform because it automatically handles the fr
 ## Post-Deployment Checklist
 
 - [ ] **Verify Database**: Ensure your MongoDB Atlas IP Whitelist allows "0.0.0.0/0" (or specifically the IP of your hosting provider).
-- [ ] **Test Analysis**: Take a practice test to confirm NVIDIA NIM is generating results correctly on the live URL.
+- [ ] **Test Analysis**: Take a practice test to confirm Google Gemini is generating results correctly on the live URL.
 - [ ] **Security**: Change your `JWT_SECRET` from the local default to something highly secure.
 
 **Your assessment platform is now global!** 🚀

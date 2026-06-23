@@ -53,7 +53,7 @@ Output exactly these sections (BE BRIEF, 2 sentences max each):
         else:
             genai.configure(api_key=GEMINI_API_KEY)
             model = genai.GenerativeModel('models/gemini-2.5-flash')
-            response = model.generate_content(prompt)
+            response = await model.generate_content_async(prompt)
             ai_evaluation = response.text
             print("✅ Gemini evaluation successful")
     except Exception as e:
