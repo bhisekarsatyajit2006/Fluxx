@@ -1,6 +1,7 @@
 /**
  * coding.js – Coding round engine
  * Handles: question fetching, code editor, submission, and AI evaluation
+ * INTEGRATED WITH AntiCheat module
  */
 
 const API_BASE = ''; // Use relative paths
@@ -8,129 +9,130 @@ const API_BASE = ''; // Use relative paths
 // ── State ─────────────────────────────────────────────────────────────
 let CURRENT_QUESTION = null;
 let CODE_CONTENT = '';
+let ROUND_ACTIVE = false;
 
 // ── DOM refs ──────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
 const loadingOverlay = $('loading-overlay');
-const resultModal = $('result-modal');
-const aiFeedback = $('ai-feedback');
+const mainContainer = $('main-container');
+const loadingTitle = $('loading-title');
+const loadingMsg = $('loading-msg');
+const spinner = $('loading-spinner');
+const startConfirm = $('start-confirm');
+const startBtn = $('real-start-btn');
+const terminatedOverlay = $('terminated-overlay');
+const terminateReason = $('terminate-reason');
 
 // ── Load Question ─────────────────────────────────────────────────────
 async function loadCodingQuestion() {
-  loadingOverlay.style.display = 'flex';
-  
   try {
     const res = await fetch(`${API_BASE}/api/coding/start`, { method: 'GET' });
     
-    if (!res.ok) {
-      throw new Error('Failed to load question.');
-    }
+    if (!res.ok) throw new Error('Failed to load question.');
 
     CURRENT_QUESTION = await res.json();
-    renderQuestion();
-    loadingOverlay.style.display = 'none';
+    
+    // Show start confirm instead of auto-starting
+    spinner.classList.add('hidden');
+    loadingTitle.textContent = 'Coding Challenge Ready';
+    loadingMsg.textContent = 'This round requires fullscreen. Tab switching or exiting fullscreen will terminate the session.';
+    startConfirm.classList.remove('hidden');
 
   } catch (err) {
-    loadingOverlay.innerHTML = `
-      <div style="text-align: center; color: #ff5470;">
-        <h2>⚠️ Error</h2>
-        <p>${err.message}</p>
-        <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #6c63ff; color: white; border: none; border-radius: 8px; cursor: pointer;">
-          Try Again
-        </button>
-      </div>
-    `;
+    loadingTitle.textContent = '⚠️ Error';
+    loadingMsg.textContent = err.message;
+    loadingMsg.style.color = '#ff5470';
+    spinner.classList.add('hidden');
   }
+}
+
+// ── Start Round (Fullscreen + AntiCheat) ──────────────────────────
+startBtn.addEventListener('click', async () => {
+  const ok = await AntiCheat.requestFullscreen(document.documentElement);
+  if (!ok) {
+    alert('Fullscreen is required to enter the coding round.');
+    return;
+  }
+
+  ROUND_ACTIVE = true;
+  loadingOverlay.classList.add('hidden');
+  mainContainer.classList.remove('hidden');
+
+  // We don't have a backend session_id for coding yet, so we use a dummy
+  AntiCheat.start('coding_round', onTerminated);
+  
+  renderQuestion();
+});
+
+function onTerminated(reason) {
+  ROUND_ACTIVE = false;
+  mainContainer.classList.add('hidden');
+  
+  const messages = {
+    tab_switch: 'You switched tabs or windows.',
+    window_blur: 'Focus was lost from the coding window.',
+    fullscreen_exit: 'You exited fullscreen mode.',
+    page_close: 'The page was closed.'
+  };
+
+  terminateReason.textContent = messages[reason] || 'A security rule was violated.';
+  terminatedOverlay.classList.remove('hidden');
 }
 
 // ── Render Question ──────────────────────────────────────────────────
 function renderQuestion() {
   if (!CURRENT_QUESTION) return;
 
-  const container = document.querySelector('.coding-container') || document.body;
-
   const html = `
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; height: 100vh; padding: 20px;">
+    <div class="coding-layout">
       
       <!-- Left: Problem Statement -->
-      <div style="overflow-y: auto; padding: 30px; background: rgba(255,255,255,0.05); border-radius: 15px;">
-        <h2 style="color: var(--accent-light); margin-bottom: 10px;">${CURRENT_QUESTION.title}</h2>
-        <div style="color: #a76bff; margin-bottom: 20px; font-size: 0.9rem;">
-          <span style="background: rgba(167,107,255,0.2); padding: 5px 12px; border-radius: 20px;">
+      <div class="panel">
+        <h2 style="color: #6c63ff; margin-bottom: 10px;">${CURRENT_QUESTION.title}</h2>
+        <div style="margin-bottom: 20px;">
+          <span style="background: rgba(108,99,255,0.2); padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; color: #a76bff;">
             ${CURRENT_QUESTION.difficulty} • ${CURRENT_QUESTION.category}
           </span>
         </div>
         
-        <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 30px;">
-          ${CURRENT_QUESTION.description}
-        </p>
+        <div class="problem-content">
+          <p>${CURRENT_QUESTION.description.replace(/\n/g, '<br>')}</p>
+        </div>
 
-        <div style="background: rgba(108,99,255,0.1); padding: 20px; border-radius: 10px; border-left: 4px solid #6c63ff;">
-          <h4 style="color: var(--accent-light); margin-bottom: 10px;">Starter Code:</h4>
-          <pre style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; overflow-x: auto; color: #a3e635;">
-<code>${CURRENT_QUESTION.starter_code}</code>
-          </pre>
+        <div style="background: rgba(108,99,255,0.1); padding: 20px; border-radius: 12px; border-left: 4px solid #6c63ff; margin-top: 30px;">
+          <h4 style="margin-bottom: 10px; color: #6c63ff;">Starter Code:</h4>
+          <pre style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; overflow-x: auto; color: #a3e635; font-size: 0.9rem;"><code>${CURRENT_QUESTION.starter_code}</code></pre>
         </div>
       </div>
 
       <!-- Right: Code Editor -->
-      <div style="display: flex; flex-direction: column; gap: 15px; padding: 30px; background: rgba(255,255,255,0.05); border-radius: 15px;">
-        <h3 style="color: var(--text-primary); margin-bottom: 10px;">Write Your Solution</h3>
+      <div class="panel">
+        <h3 style="margin-bottom: 15px;">Write Your Solution</h3>
         
-        <textarea 
-          id="code-editor" 
-          placeholder="Write your code here..."
-          style="
-            flex: 1;
-            padding: 15px;
-            background: rgba(0,0,0,0.4);
-            color: #a3e635;
-            border: 1px solid rgba(108,99,255,0.3);
-            border-radius: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.95rem;
-            resize: none;
-            outline: none;
-          "
-        >${CURRENT_QUESTION.starter_code || ''}</textarea>
+        <div class="editor-container" style="flex: 1; display: flex; flex-direction: column;">
+          <textarea 
+            id="code-editor" 
+            placeholder="# Write your Python code here..."
+          >${CURRENT_QUESTION.starter_code || ''}</textarea>
 
-        <div style="display: flex; gap: 15px;">
-          <button onclick="submitCode()" style="
-            flex: 1;
-            padding: 12px;
-            background: linear-gradient(135deg, #6c63ff, #a76bff);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-          " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-            ✓ Submit Solution
-          </button>
-          
-          <button onclick="location.href='/dashboard'" style="
-            padding: 12px 30px;
-            background: rgba(255,255,255,0.1);
-            color: var(--text-primary);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-          " onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
-            Cancel
-          </button>
+          <div style="display: flex; gap: 15px; margin-top: 5px;">
+            <button onclick="submitCode()" class="btn-primary" style="flex: 1;">
+              ✓ Submit Solution
+            </button>
+            
+            <button onclick="confirmExit()" style="padding: 0 25px; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer;">
+              Exit
+            </button>
+          </div>
         </div>
       </div>
     </div>
   `;
 
-  container.innerHTML = html;
+  mainContainer.innerHTML = html;
   
-  // Store reference to code editor
-  const editor = document.getElementById('code-editor');
+  const editor = $('code-editor');
   if (editor) {
     editor.addEventListener('input', (e) => {
       CODE_CONTENT = e.target.value;
@@ -139,26 +141,28 @@ function renderQuestion() {
   }
 }
 
+function confirmExit() {
+  if (confirm('Are you sure you want to exit? Your progress will be lost.')) {
+    AntiCheat.stop();
+    location.href = '/dashboard';
+  }
+}
+
 // ── Submit Code ───────────────────────────────────────────────────────
 async function submitCode() {
-  if (!CURRENT_QUESTION) {
-    alert('No question loaded.');
-    return;
-  }
-
   if (!CODE_CONTENT.trim()) {
     alert('Please write some code before submitting.');
     return;
   }
 
-  loadingOverlay.style.display = 'flex';
-  loadingOverlay.innerHTML = `
-    <div style="text-align: center;">
-      <div class="spinner" style="width: 60px; height: 60px; border: 4px solid rgba(108,99,255,0.2); border-top-color: #6c63ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; margin-bottom: 20px;"></div>
-      <h2>Evaluating Your Code…</h2>
-      <p style="color: var(--text-muted);">This may take a moment</p>
-    </div>
-  `;
+  // Stop anti-cheat so we can show result modal (which might trigger blur/focus issues if not handled)
+  AntiCheat.stop();
+
+  loadingOverlay.classList.remove('hidden');
+  spinner.classList.remove('hidden');
+  loadingTitle.textContent = 'Evaluating...';
+  loadingMsg.textContent = 'AI is analyzing your logic and efficiency.';
+  startConfirm.classList.add('hidden');
 
   try {
     const res = await fetch(`${API_BASE}/api/coding/submit`, {
@@ -172,85 +176,42 @@ async function submitCode() {
       }),
     });
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Submission failed.');
-    }
+    if (!res.ok) throw new Error('Submission failed.');
 
     const evaluation = await res.json();
     showEvaluation(evaluation);
 
   } catch (err) {
-    loadingOverlay.innerHTML = `
-      <div style="text-align: center; color: #ff5470;">
-        <h2>⚠️ Error</h2>
-        <p>${err.message}</p>
-        <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #6c63ff; color: white; border: none; border-radius: 8px; cursor: pointer;">
-          Try Again
-        </button>
-      </div>
-    `;
+    loadingTitle.textContent = '⚠️ Error';
+    loadingMsg.textContent = err.message;
+    spinner.classList.add('hidden');
+    // Allow restart or resume if error
+    setTimeout(() => location.reload(), 3000);
   }
 }
 
 // ── Show Evaluation ───────────────────────────────────────────────────
 function showEvaluation(evaluation) {
-  loadingOverlay.style.display = 'none';
+  loadingOverlay.classList.add('hidden');
 
   const html = `
-    <div style="position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); z-index: 1000;">
-      <div style="
-        background: linear-gradient(135deg, rgba(108,99,255,0.1), rgba(167,107,255,0.1));
-        border: 1px solid rgba(255,255,255,0.2);
-        border-radius: 20px;
-        padding: 40px;
-        max-width: 700px;
-        max-height: 80vh;
-        overflow-y: auto;
-        backdrop-filter: blur(10px);
-      ">
-        <h1 style="color: var(--accent-light); margin-bottom: 20px;">✓ Evaluation Complete</h1>
+    <div class="overlay">
+      <div class="test-card" style="max-width: 800px; max-height: 85vh; overflow-y: auto;">
+        <h1 style="color: #6c63ff; margin-bottom: 25px;">Assessment Complete</h1>
 
-        <div style="background: rgba(255,255,255,0.08); padding: 20px; border-radius: 15px; margin-bottom: 20px;">
-          <h3 style="color: var(--accent-light); margin-bottom: 15px;">📝 Question</h3>
-          <p style="color: var(--text-primary); font-weight: 600;">${CURRENT_QUESTION.title}</p>
-          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 5px;">${CURRENT_QUESTION.category}</p>
-        </div>
-
-        <div style="background: rgba(255,255,255,0.08); padding: 20px; border-radius: 15px; margin-bottom: 20px;">
-          <h3 style="color: var(--accent-light); margin-bottom: 15px;">🤖 AI Evaluation</h3>
-          <p style="color: var(--text-secondary); line-height: 1.6; white-space: pre-wrap;">
-            ${evaluation.evaluation || 'No evaluation available.'}
+        <div style="background: rgba(108,99,255,0.05); padding: 25px; border-radius: 15px; text-align: left; margin-bottom: 25px;">
+          <h3 style="color: #6c63ff; margin-bottom: 10px;">${CURRENT_QUESTION.title}</h3>
+          <p style="color: var(--text-secondary); white-space: pre-wrap; line-height: 1.7;">
+            ${evaluation.evaluation}
           </p>
         </div>
 
         <div style="display: flex; gap: 15px;">
-          <button onclick="location.href='/dashboard'" style="
-            flex: 1;
-            padding: 12px;
-            background: linear-gradient(135deg, #6c63ff, #a76bff);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-          " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+          <button onclick="location.href='/dashboard'" class="btn-primary" style="flex: 1;">
             Back to Dashboard
           </button>
-          
-          <button onclick="location.reload()" style="
-            flex: 1;
-            padding: 12px;
-            background: rgba(255,255,255,0.1);
-            color: var(--text-primary);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-          " onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
-            Try Another Problem
+          <button onclick="location.reload()" style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 14px; border-radius: 12px; cursor: pointer; font-weight: 700;">
+            Try Another
           </button>
         </div>
       </div>

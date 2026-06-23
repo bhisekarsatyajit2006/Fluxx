@@ -3,67 +3,160 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Coding — Pyrefly Assessment</title>
+  <title>Coding Round — Pyrefly</title>
   <link rel="stylesheet" href="/static/css/style.css"/>
   <style>
     body {
       margin: 0;
       padding: 0;
-      background: linear-gradient(135deg, rgba(108,99,255,0.1), rgba(167,107,255,0.1));
+      background: #0f0a1e;
+      color: var(--text-primary);
       min-height: 100vh;
+      overflow: hidden; /* Fullscreen logic */
     }
-    .coding-container {
-      width: 100%;
+
+    .coding-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       height: 100vh;
+      gap: 1px;
+      background: rgba(255,255,255,0.1);
+    }
+
+    .panel {
+      background: #0f0a1e;
+      overflow-y: auto;
+      padding: 30px;
       display: flex;
       flex-direction: column;
     }
-    #loading-overlay {
+
+    .problem-content {
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
+    .editor-container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    #code-editor {
+      flex: 1;
+      width: 100%;
+      background: rgba(0,0,0,0.3);
+      color: #a3e635;
+      border: 1px solid rgba(108,99,255,0.2);
+      border-radius: 12px;
+      padding: 20px;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 15px;
+      resize: none;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    #code-editor:focus {
+      border-color: #6c63ff;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 900px) {
+      .coding-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        height: auto;
+        overflow-y: auto;
+      }
+      body { overflow: auto; }
+      .panel { height: auto; }
+      #code-editor { min-height: 300px; }
+    }
+
+    /* Overlays */
+    .overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(10, 5, 20, 0.95);
+      z-index: 2000;
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
-      flex-direction: column;
+      backdrop-filter: blur(10px);
       text-align: center;
-      color: white;
+      padding: 20px;
     }
+
+    .hidden { display: none !important; }
+
+    .test-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 40px;
+      border-radius: 24px;
+      max-width: 500px;
+      width: 100%;
+    }
+
     .spinner {
-      width: 60px;
-      height: 60px;
-      border: 4px solid rgba(108, 99, 255, 0.2);
+      width: 50px; height: 50px;
+      border: 3px solid rgba(108, 99, 255, 0.2);
       border-top-color: #6c63ff;
       border-radius: 50%;
       animation: spin 1s linear infinite;
-      margin-bottom: 20px;
+      margin: 0 auto 20px;
     }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .btn-primary {
+      padding: 14px 30px;
+      background: linear-gradient(135deg, #6c63ff, #a76bff);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: 0.3s;
     }
-    h2 {
-      margin-top: 20px;
-      font-size: 1.3rem;
-    }
-    p {
-      color: var(--text-muted);
-      margin-top: 10px;
-    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(108,99,255,0.3); }
   </style>
 </head>
 <body>
-  <script>window.userEmail = window.userEmail || localStorage.getItem('user_email') || "";</script>
-  
-  <div class="coding-container"></div>
 
-  <div id="loading-overlay">
-    <div class="spinner"></div>
-    <h2>Fetching Question…</h2>
-    <p>Loading your coding challenge</p>
+  <!-- Loading / Start Overlay -->
+  <div id="loading-overlay" class="overlay">
+    <div class="test-card">
+      <div id="loading-spinner" class="spinner"></div>
+      <h2 id="loading-title">Preparing Challenge</h2>
+      <p id="loading-msg" style="margin-bottom: 25px;">Initializing your secure coding environment...</p>
+      
+      <div id="start-confirm" class="hidden">
+        <button id="real-start-btn" class="btn-primary">Start Coding Round</button>
+        <p style="font-size: 0.85rem; margin-top: 15px; color: #ff5470;">
+          ⚠ Fullscreen is required. Tab switching will terminate the round.
+        </p>
+      </div>
+    </div>
   </div>
 
-  <!-- Include the coding script -->
+  <!-- Terminated Overlay -->
+  <div id="terminated-overlay" class="overlay hidden">
+    <div class="test-card" style="border-color: #ff5470;">
+      <h1 style="color: #ff5470; margin-bottom: 15px;">Round Terminated</h1>
+      <p id="terminate-reason" style="margin-bottom: 30px;"></p>
+      <button onclick="location.href='/dashboard'" class="btn-primary">Return to Dashboard</button>
+    </div>
+  </div>
+
+  <div id="main-container" class="hidden">
+    <!-- Content injected by coding.js -->
+  </div>
+
+  <!-- Scripts -->
+  <script src="/static/js/anticheat.js"></script>
   <script src="/static/js/coding.js"></script>
 </body>
 </html>
